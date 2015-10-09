@@ -3,29 +3,29 @@ for Linux, OSX, and Windows.
 
 The directory structure is as follows:
 
-(wxWidgets_application_template) --
-                                  | CMakeLists.txt
-                                  | README.txt
-                                  |
-                                  |-- (src)
-                                  |       | main.cpp
-                                  |       | images.h
-                                  |
-                                  |-- (res)
-                                  |       | forms.fbp
-                                  |       | mywxproject.png
-                                  |
-                                  |-- (build-linux)
-                                  |       | 
-                                  |
-                                  |-- (build-osx)
-                                  |       | 
-                                  |
-                                  |-- (build-win)
-                                  |       | 
-                                  |
-                                  |-- (nbproject)
-                                          | <<nbproject files>>
+(wxWidgets_application_template_CMAKE) --
+                                        | CMakeLists.txt
+                                        | README.txt
+                                        |
+                                        |-- (src)
+                                        |       | main.cpp
+                                        |       | images.h
+                                        |
+                                        |-- (res)
+                                        |       | forms.fbp
+                                        |       | mywxproject.png
+                                        |
+                                        |-- (build-linux)
+                                        |       | 
+                                        |
+                                        |-- (build-osx)
+                                        |       | 
+                                        |
+                                        |-- (build-win)
+                                        |       | 
+                                        |
+                                        |-- (nbproject)
+                                                | <<nbproject files>>
 
 
 forms.fbp:        Blank wxFormBuilder document with paths entered.
@@ -41,9 +41,6 @@ main.cpp:         Template for main. Includes instructions for adding wx
 images.h:         Prototype file for including images in the application. 
 		          Full directions for use are included at the top of the 
                   file.
-Makefile(x3):     Platform specific make instructions. Each variable 
-                  is documented.
-
 
 Distribution
 ============
