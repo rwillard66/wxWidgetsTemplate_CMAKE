@@ -5,40 +5,39 @@ cmake_minimum_required(VERSION 2.8.9)
 ####################################################
 
 PROJECT (mywxproject)
-SET(RES_LOC "${CMAKE_CURRENT_LIST_DIR}/res")
 SET(TARGET_VERSION_MAJOR 0)
 SET(TARGET_VERSION_MINOR 1)
 SET(TARGET_VERSION_PATCH 0)
 SET(VERSION "${TARGET_VERSION_MAJOR}.${TARGET_VERSION_MINOR}.${TARGET_VERSION_PATCH}")
-SET(CPACK_PACKAGE_VENDOR "SagaTech Electronics Inc.")
-SET(CPACK_PACKAGE_HOMEPAGE "http://www.sagatech.ca")
 SET(CPACK_PACKAGE_CONTACT "Rob Willard <robw@sagatech.ca>")
-# Set Gnome icon location for .deb distribution
-SET(CPACK_DEBIAN_PACKAGE_SECTION "Office")
 SET(TARGET_SHORT_DESCRIPTION "My application short description")
 # TARGET_LONG_DESCRIPTION: each line must begin with a <space> and must not be
 # longer than 80 characters.
 SET(TARGET_LONG_DESCTIPTION " This is a template to create new wxWidgets based\n")
 SET(TARGET_LONG_DESCTIPTION "${TARGET_LONG_DESCTIPTION} applications. Please view the README.txt file included in the\n")
 SET(TARGET_LONG_DESCTIPTION "${TARGET_LONG_DESCTIPTION} root directory of this project.\n")
+
+# Any additional source include directories
+SET(ADDSRCDIR "")
+
 # Add any Debian depends for packaging. This variable is comma separated
 SET(DEPENDS "libwxbase3.0-0, libwxgtk3.0-0")
+# Set Gnome icon location for .deb distribution
+SET(CPACK_DEBIAN_PACKAGE_SECTION "Office")
 
 ####################################################
 # Platform specific settings
 ####################################################
+SET(RES_LOC "${CMAKE_CURRENT_LIST_DIR}/res")
+
 SET(ICONTYPE ico)
 IF(WIN32)
-	SET (SED_CMD sed -i )
-	SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+	SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static-libgcc -static-libstdc++ -mwindows -Wall")
 ELSEIF(APPLE)
 	SET(ICONTYPE icns)
 	SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libstdc++")
-	INCLUDE_DIRECTORIES(/wxWidgets-3.0.2/build-release/)
 	INCLUDE_DIRECTORIES(/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.11.sdk/usr/include/c++/4.2.1)
-	SET (SED_CMD sed -i ~)
 ELSE() #LINUX
-	SET (SED_CMD sed -i )
 ENDIF()
 
 ####################################################
@@ -69,7 +68,9 @@ SET( IMAGES_ICN ${PROJECT_NAME} )
 ####################################################
 # Image creation
 ####################################################
-SET( TMP_DIR "./${CMAKE_FILES_DIRECTORY}/CMakeTmp" )
+SET( TMP_DIR "${CMAKE_BINARY_DIR}/CMakeFiles/CMakeTmp" )
+
+FIND_PACKAGE(ImageMagick COMPONENTS convert REQUIRED)
 
 FUNCTION (MAKE_XPM size imagelist)
 	FOREACH(image ${imagelist})
@@ -77,15 +78,17 @@ FUNCTION (MAKE_XPM size imagelist)
 		SET( PNG_FILE ${RES_LOC}/${image}.png )
 		SET( XPM_FILE ${TMP_DIR}/${image}${size}.xpm )
 		SET( CPP_FILE ${RES_LOC}/cpp/${image}${size}.cpp )
-		EXECUTE_PROCESS( COMMAND "convert ${PNG_FILE} -resize ${size}x${size} ${XPM_FILE}")
-		EXECUTE_PROCESS( COMMAND mv ${XPM_FILE} ${CPP_FILE} )
-		EXECUTE_PROCESS( COMMAND ${SED_CMD} s/static/const/ ${CPP_FILE} )
+		EXECUTE_PROCESS( COMMAND ${ImageMagick_convert_EXECUTABLE} ${PNG_FILE} -resize ${size}x${size} ${XPM_FILE})
+		EXECUTE_PROCESS( COMMAND ${CMAKE_COMMAND} -E copy  ${XPM_FILE} ${CPP_FILE} )
+		FILE(READ ${CPP_FILE} STATCPP)
+		STRING(REPLACE "static" "const" CONSTCPP "${STATCPP}")
+		FILE(WRITE ${CPP_FILE} "${CONSTCPP};")
 	ENDFOREACH(image)
 ENDFUNCTION(MAKE_XPM)
 
 FUNCTION (MAKE_ICON image)
 	MESSAGE("  -- Building icon: ${image}.${ICONTYPE}")
-	EXECUTE_PROCESS(COMMAND "convert ${RES_LOC}/${image}.png ${RES_LOC}/${image}.${ICONTYPE}")
+	EXECUTE_PROCESS(COMMAND ${ImageMagick_convert_EXECUTABLE} ${RES_LOC}/${image}.png ${RES_LOC}/${image}.${ICONTYPE})
 ENDFUNCTION(MAKE_ICON)
 
 MAKE_XPM(16 "${IMAGES_SML}")
@@ -97,10 +100,10 @@ MAKE_ICON("${IMAGES_ICN}")
 # Build forms section
 ####################################################
 
-EXECUTE_PROCESS( COMMAND wxformbuilder --generate --language C++ ${RES_LOC}/forms.fbp)
+EXECUTE_PROCESS( COMMAND wxformbuilder --generate --language=C++ ${RES_LOC}/forms.fbp)
 
 ####################################################
-# Build Application seection
+# Build Application section
 ####################################################
 
 INCLUDE_DIRECTORIES(src res)
@@ -108,35 +111,75 @@ FILE(GLOB SOURCES "src/*.cpp" "res/cpp/*.cpp")
 
 ADD_EXECUTABLE(${PROJECT_NAME} ${SOURCES})
 
-SET(wxWidgets_CONFIGURATION mswu)
-FIND_PACKAGE(wxWidgets COMPONENTS core base REQUIRED)
-FIND_PACKAGE(MYSQLCONNECTORCPP REQUIRED)
-INCLUDE_DIRECTORIES(${MYSQLCONNECTORCPP_INCLUDE_DIRS})
+IF(WIN32)
+	SET(wxWidgets_CONFIGURATION msw)
+	SET(wxWidgets_USE_STATIC yes)
+ELSEIF(APPLE)
+	SET(wxWidgets_ROOT_DIR "/wxWidgets-3.0.2/build-release/")
+ENDIF(WIN32)
+
+FIND_PACKAGE(wxWidgets COMPONENTS adv core base REQUIRED)
 INCLUDE(${wxWidgets_USE_FILE})
-TARGET_LINK_LIBRARIES(${PROJECT_NAME} ${wxWidgets_LIBRARIES} ${MYSQLCONNECTORCPP_LIBRARIES})
+
+TARGET_LINK_LIBRARIES(${PROJECT_NAME} ${wxWidgets_LIBRARIES})
 
 ####################################################
 # Packaging
 ####################################################
 
 #common
-SET(CPACK_PACKAGE_NAME ${PROJECT_NAME})
+SET(CPACK_PACKAGE_NAME "${PROJECT_NAME}Installer")
 SET(CPACK_PACKAGE_VERSION_MAJOR "${TARGET_VERSION_MAJOR}")
 SET(CPACK_PACKAGE_VERSION_MINOR "${TARGET_VERSION_MINOR}")
 SET(CPACK_PACKAGE_VERSION_PATCH "${TARGET_VERSION_PATCH}")
+SET(CPACK_PACKAGE_VERSION "${VERSION}")
 SET(CPACK_PACKAGE_ICON "${RES_LOC}/${PROJECT_NAME}.${ICONTYPE}")
+SET(CPACK_PACKAGE_VENDOR "SagaTech Electronics Inc.")
+SET(CPACK_PACKAGE_HOMEPAGE "http://www.sagatech.ca")
+SET(CPACK_PACKAGE_DESCRIPTION_SUMMARY "${TARGET_SHORT_DESCRIPTION}")
 
 IF(WIN32)
-set(CPACK_GENERATOR "NSIS")
-set(CPACK_PACKAGE_NAME "${PROJECT_NAME}")
-set(CPACK_PACKAGE_VENDOR "SagaTech Electronics, Inc.")
-set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "${TARGET_SHORT_DESCRIPTION}")
-set(CPACK_PACKAGE_VERSION "${VERSION}")
-SET(CPACK_PACKAGE_VERSION_MAJOR "${TARGET_VERSION_MAJOR}")
-SET(CPACK_PACKAGE_VERSION_MINOR "${TARGET_VERSION_MINOR}")
-SET(CPACK_PACKAGE_VERSION_PATCH "${TARGET_VERSION_PATCH}")
-set(CPACK_PACKAGE_INSTALL_DIRECTORY "SagaTech/${PROJECT_NAME}")
-#SET(CPACK_NSIS_MODIFY_PATH ON)
+	#Create and link resource file for icons.
+	SET(INFO_RC "id ICON \"${RES_LOC}/${PROJECT_NAME}.${ICONTYPE}\"\n")
+	SET(INFO_RC "${INFO_RC}1 VERSIONINFO\n")
+	SET(INFO_RC "${INFO_RC}FILEVERSION\t${TARGET_VERSION_MAJOR},${TARGET_VERSION_MINOR},${TARGET_VERSION_PATCH}\n")
+	SET(INFO_RC "${INFO_RC}PRODUCTVERSION\t${TARGET_VERSION_MAJOR},${TARGET_VERSION_MINOR},${TARGET_VERSION_PATCH}\n")
+	SET(INFO_RC "${INFO_RC}BEGIN\n")
+	SET(INFO_RC "${INFO_RC} BLOCK \"StringFileInfo\"\n")
+	SET(INFO_RC "${INFO_RC} BEGIN\n")
+	SET(INFO_RC "${INFO_RC}  BLOCK \"080904E4\"\n")
+	SET(INFO_RC "${INFO_RC}  BEGIN\n")
+	SET(INFO_RC "${INFO_RC}    VALUE \"CompanyName\", \"SagaTech Electronics, Inc.\"\n")
+	SET(INFO_RC "${INFO_RC}    VALUE \"FileDescription\", \"${TARGET_SHORT_DESCRIPTION}\"\n")
+	SET(INFO_RC "${INFO_RC}    VALUE \"FileVersion\", \"${VERSION}\"\n")
+	SET(INFO_RC "${INFO_RC}    VALUE \"InternalName\", \"${PROJECT_NAME}\"\n")
+	SET(INFO_RC "${INFO_RC}    VALUE \"LegalCopyright\", \"(c) 2015 SagaTech Electronics, Inc.\"\n")
+	SET(INFO_RC "${INFO_RC}    VALUE \"OriginalFilename\", \"${PROJECT_NAME}\"\n")
+	SET(INFO_RC "${INFO_RC}    VALUE \"ProductName\", \"${PROJECT_NAME}\"\n")
+	SET(INFO_RC "${INFO_RC}    VALUE \"ProductVersion\", \"${VERSION}\"\n")
+	SET(INFO_RC "${INFO_RC}  END\n")
+	SET(INFO_RC "${INFO_RC} END\n\n")
+	SET(INFO_RC "${INFO_RC} BLOCK \"VarFileInfo\"\n")
+	SET(INFO_RC "${INFO_RC} BEGIN\n")
+	SET(INFO_RC "${INFO_RC}  VALUE \"Translation\", 0x809, 1252\n")
+	SET(INFO_RC "${INFO_RC} END\n")
+	SET(INFO_RC "${INFO_RC}END\n")
+	FILE(WRITE "${CMAKE_BINARY_DIR}/${PROJECT_NAME}.rc" "${INFO_RC}")
+	EXECUTE_PROCESS(COMMAND windres "${CMAKE_BINARY_DIR}/${PROJECT_NAME}.rc" -O coff -o "${CMAKE_BINARY_DIR}/${PROJECT_NAME}.res")
+	#link resources into executable
+	TARGET_LINK_LIBRARIES(${PROJECT_NAME} ${CMAKE_BINARY_DIR}/${PROJECT_NAME}.res)
+	#set cpack variables
+	SET(CPACK_INSTALL_SYSTEM_RUNTIME_LIBS_SKIP TRUE)
+	INCLUDE(InstallRequiredSystemLibraries)
+	INSTALL(PROGRAMS ${CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS}
+        DESTINATION programs
+        COMPONENT applications)
+	INSTALL(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION .)
+	SET(CPACK_PACKAGE_INSTALL_DIRECTORY "Sagatech\\\\${PROJECT_NAME}")
+	SET(CPACK_PACKAGE_ICON "${RES_LOC}\\\\${PROJECT_NAME}.png")
+	SET(CPACK_NSIS_MUI_ICON "${RES_LOC}\\\\${PROJECT_NAME}.${ICONTYPE}")
+	SET(CPACK_NSIS_MUI_UNIICON "${RES_LOC}\\\\${PROJECT_NAME}.${ICONTYPE}")
+	SET(CPACK_NSIS_MENU_LINKS "${PROJECT_NAME}" "${PROJECT_NAME}")
 ELSEIF(APPLE)
 	# Create Info.plist file for bundle
 	SET(INFO_FILE "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
@@ -192,5 +235,4 @@ ELSE() #LINUX
 	INSTALL(FILES ${CMAKE_BINARY_DIR}/${PROJECT_NAME}.desktop DESTINATION /usr/share/applications)
 	INSTALL(FILES ${RES_LOC}/${PROJECT_NAME}.${ICONTYPE} DESTINATION /usr/share/${PROJECT_NAME})
 ENDIF()
-
 INCLUDE(CPack)
