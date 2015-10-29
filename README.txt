@@ -14,6 +14,7 @@ The directory structure is as follows:
                                         |-- (res)
                                         |       | forms.fbp
                                         |       | mywxproject.png
+                                        |       |-- (cpp)
                                         |
                                         |-- (build-linux)
                                         |       | 
@@ -51,5 +52,4 @@ generate the following:
 Linux - A .deb and .changes file are created that can be added to the repository
 OSX   - A .app bundle is created. This can then be added to a .dmg distribution 
         by following the instructions in the Sagatech wiki.
-Windows - ((UNIMPLEMENTED)) Creates the INNO script file for creating a 
-          distribution executable.
+Windows - Creates NSIS install package. 
