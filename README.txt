@@ -50,6 +50,5 @@ create a package, run 'make package' in the target build folder. This will
 generate the following:
 
 Linux - A .deb and .changes file are created that can be added to the repository
-OSX   - A .app bundle is created. This can then be added to a .dmg distribution 
-        by following the instructions in the Sagatech wiki.
+OSX   - A .app bundle is created. This can then be added to a .dmg distribution. 
 Windows - Creates NSIS install package. 
