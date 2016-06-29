@@ -107,7 +107,7 @@ EXECUTE_PROCESS( COMMAND wxformbuilder --generate --language=C++ ${RES_LOC}/form
 ####################################################
 
 INCLUDE_DIRECTORIES(src res)
-FILE(GLOB SOURCES "src/*.cpp" "res/cpp/*.cpp")
+FILE(GLOB SOURCES "src/*.c*" "res/cpp/*.c*")
 
 ADD_EXECUTABLE(${PROJECT_NAME} ${SOURCES})
 
