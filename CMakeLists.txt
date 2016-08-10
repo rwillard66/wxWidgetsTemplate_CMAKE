@@ -25,6 +25,9 @@ SET(DEPENDS "libwxbase3.0-0, libwxgtk3.0-0")
 # Set Gnome icon location for .deb distribution
 SET(CPACK_DEBIAN_PACKAGE_SECTION "Office")
 
+#specify location of custom cmake modules
+SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_LIST_DIR}/cmake_modules")
+
 ####################################################
 # Platform specific settings
 ####################################################
