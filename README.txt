@@ -16,6 +16,9 @@ The directory structure is as follows:
                                         |       | mywxproject.png
                                         |       |-- (cpp)
                                         |
+                                        |-- (cmake_modules)
+                                        |       | 
+                                        |
                                         |-- (build-linux)
                                         |       | 
                                         |
