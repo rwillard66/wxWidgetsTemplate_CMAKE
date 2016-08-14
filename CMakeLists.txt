@@ -1,3 +1,20 @@
+#	(c) 2016 Rob Willard <rwillard66@gmail.com>
+#
+#    This file is part of wxWidgetsTemplate.
+#
+#    wxWidgetsTemplate is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    wxWidgetsTemplate is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with wxWidgetsTemplate.  If not, see <http://www.gnu.org/licenses/>.
+
 cmake_minimum_required(VERSION 2.8.9)
 
 ####################################################
@@ -9,7 +26,7 @@ SET(TARGET_VERSION_MAJOR 0)
 SET(TARGET_VERSION_MINOR 1)
 SET(TARGET_VERSION_PATCH 0)
 SET(VERSION "${TARGET_VERSION_MAJOR}.${TARGET_VERSION_MINOR}.${TARGET_VERSION_PATCH}")
-SET(CPACK_PACKAGE_CONTACT "Rob Willard <robw@sagatech.ca>")
+SET(CPACK_PACKAGE_CONTACT "Rob Willard <rwillard66@gmail.com>")
 SET(TARGET_SHORT_DESCRIPTION "My application short description")
 # TARGET_LONG_DESCRIPTION: each line must begin with a <space> and must not be
 # longer than 80 characters.
@@ -25,8 +42,30 @@ SET(DEPENDS "libwxbase3.0-0, libwxgtk3.0-0")
 # Set Gnome icon location for .deb distribution
 SET(CPACK_DEBIAN_PACKAGE_SECTION "Office")
 
+####################################################
+# LIBRARY DISCOVERY
+####################################################
+MESSAGE("== Discovering Libraries ==")
+
 #specify location of custom cmake modules
 SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_LIST_DIR}/cmake_modules")
+
+# Image magick for graphics conversion
+FIND_PACKAGE(ImageMagick COMPONENTS convert REQUIRED)
+
+#wxWidgets
+IF(WIN32)
+	SET(wxWidgets_CONFIGURATION msw)
+	SET(wxWidgets_USE_STATIC yes)
+ELSEIF(APPLE)
+	SET(wxWidgets_ROOT_DIR "/wxWidgets-3.0.2/build-release/")
+ENDIF(WIN32)
+FIND_PACKAGE(wxWidgets COMPONENTS adv gl core base html REQUIRED)
+INCLUDE(${wxWidgets_USE_FILE})
+INCLUDE_DIRECTORIES(${wxWidgets_INCLUDE_DIRS})
+
+# Add any additional libraries to the following 
+SET(MYLIBS ${wxWidgets_LIBRARIES})
 
 ####################################################
 # Platform specific settings
@@ -71,9 +110,9 @@ SET( IMAGES_ICN ${PROJECT_NAME} )
 ####################################################
 # Image creation
 ####################################################
-SET( TMP_DIR "${CMAKE_BINARY_DIR}/CMakeFiles/CMakeTmp" )
+MESSAGE("== Creating Images ==")
 
-FIND_PACKAGE(ImageMagick COMPONENTS convert REQUIRED)
+SET( TMP_DIR "${CMAKE_BINARY_DIR}/CMakeFiles/CMakeTmp" )
 
 FUNCTION (MAKE_XPM size imagelist)
 	FOREACH(image ${imagelist})
@@ -102,6 +141,7 @@ MAKE_ICON("${IMAGES_ICN}")
 ####################################################
 # Build forms section
 ####################################################
+MESSAGE("== Building Forms ==")
 
 EXECUTE_PROCESS( COMMAND wxformbuilder --generate --language=C++ ${RES_LOC}/forms.fbp)
 
@@ -109,27 +149,19 @@ EXECUTE_PROCESS( COMMAND wxformbuilder --generate --language=C++ ${RES_LOC}/form
 # Build Application section
 ####################################################
 
+MESSAGE("== Linking ==")
+
 INCLUDE_DIRECTORIES(src res)
 FILE(GLOB SOURCES "src/*.c*" "res/cpp/*.c*")
 
 ADD_EXECUTABLE(${PROJECT_NAME} ${SOURCES})
 
-IF(WIN32)
-	SET(wxWidgets_CONFIGURATION msw)
-	SET(wxWidgets_USE_STATIC yes)
-ELSEIF(APPLE)
-	SET(wxWidgets_ROOT_DIR "/wxWidgets-3.0.2/build-release/")
-ENDIF(WIN32)
-
-FIND_PACKAGE(wxWidgets COMPONENTS adv core base REQUIRED)
-INCLUDE(${wxWidgets_USE_FILE})
-
-TARGET_LINK_LIBRARIES(${PROJECT_NAME} ${wxWidgets_LIBRARIES})
+TARGET_LINK_LIBRARIES(${PROJECT_NAME} ${MYLIBS})
 
 ####################################################
 # Packaging
 ####################################################
-
+MESSAGE("== Packaging ==")
 #common
 SET(CPACK_PACKAGE_NAME "${PROJECT_NAME}Installer")
 SET(CPACK_PACKAGE_VERSION_MAJOR "${TARGET_VERSION_MAJOR}")
@@ -137,8 +169,8 @@ SET(CPACK_PACKAGE_VERSION_MINOR "${TARGET_VERSION_MINOR}")
 SET(CPACK_PACKAGE_VERSION_PATCH "${TARGET_VERSION_PATCH}")
 SET(CPACK_PACKAGE_VERSION "${VERSION}")
 SET(CPACK_PACKAGE_ICON "${RES_LOC}/${PROJECT_NAME}.${ICONTYPE}")
-SET(CPACK_PACKAGE_VENDOR "SagaTech Electronics Inc.")
-SET(CPACK_PACKAGE_HOMEPAGE "http://www.sagatech.ca")
+SET(CPACK_PACKAGE_VENDOR "Rob Willard")
+SET(CPACK_PACKAGE_HOMEPAGE "http://")
 SET(CPACK_PACKAGE_DESCRIPTION_SUMMARY "${TARGET_SHORT_DESCRIPTION}")
 
 IF(WIN32)
@@ -152,11 +184,11 @@ IF(WIN32)
 	SET(INFO_RC "${INFO_RC} BEGIN\n")
 	SET(INFO_RC "${INFO_RC}  BLOCK \"080904E4\"\n")
 	SET(INFO_RC "${INFO_RC}  BEGIN\n")
-	SET(INFO_RC "${INFO_RC}    VALUE \"CompanyName\", \"SagaTech Electronics, Inc.\"\n")
+	SET(INFO_RC "${INFO_RC}    VALUE \"CompanyName\", \"Rob Willard.\"\n")
 	SET(INFO_RC "${INFO_RC}    VALUE \"FileDescription\", \"${TARGET_SHORT_DESCRIPTION}\"\n")
 	SET(INFO_RC "${INFO_RC}    VALUE \"FileVersion\", \"${VERSION}\"\n")
 	SET(INFO_RC "${INFO_RC}    VALUE \"InternalName\", \"${PROJECT_NAME}\"\n")
-	SET(INFO_RC "${INFO_RC}    VALUE \"LegalCopyright\", \"(c) 2015 SagaTech Electronics, Inc.\"\n")
+	SET(INFO_RC "${INFO_RC}    VALUE \"LegalCopyright\", \"(c) 2016 Rob Willard\"\n")
 	SET(INFO_RC "${INFO_RC}    VALUE \"OriginalFilename\", \"${PROJECT_NAME}\"\n")
 	SET(INFO_RC "${INFO_RC}    VALUE \"ProductName\", \"${PROJECT_NAME}\"\n")
 	SET(INFO_RC "${INFO_RC}    VALUE \"ProductVersion\", \"${VERSION}\"\n")
@@ -208,7 +240,7 @@ ELSEIF(APPLE)
 	SET(INFO_FILE "${INFO_FILE}   <key>CFBundleShortVersionString</key>\n")
 	SET(INFO_FILE "${INFO_FILE}   <string>${VERSION}</string>\n")
 	SET(INFO_FILE "${INFO_FILE}   <key>CFBundleGetInfoString</key>\n")
-	SET(INFO_FILE "${INFO_FILE}   <string>${PROJECT_NAME}, Version ${VERSION}, SagaTech Electronics, Inc.</string>\n")
+	SET(INFO_FILE "${INFO_FILE}   <string>${PROJECT_NAME}, Version ${VERSION}, Rob Willard.</string>\n")
 	SET(INFO_FILE "${INFO_FILE}</dict>\n")
 	SET(INFO_FILE "${INFO_FILE}</plist>\n")
 	FILE(WRITE "${CMAKE_BINARY_DIR}/Info.plist" "${INFO_FILE}")
@@ -232,7 +264,7 @@ ELSE() #LINUX
 	SET(CPACK_GENERATOR "DEB")
 	SET(CPACK_DEBIAN_ARCHITECTURE ${CMAKE_SYSTEM_PROCESSOR})
 	SET(CPACK_DEBIAN_PACKAGE_DESCRIPTION "${TARGET_SHORT_DESCRIPTION}\n ${TARGET_LONG_DESCTIPTION}")
-	SET(CPACK_DEBIAN_PACKAGE_HOMEPAGE "http://www.sagatech.ca")
+	SET(CPACK_DEBIAN_PACKAGE_HOMEPAGE "http://")
 	SET(CPACK_DEBIAN_PACKAGE_DEPENDS "${DEPENDS}")
 	INSTALL(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION bin)
 	INSTALL(FILES ${CMAKE_BINARY_DIR}/${PROJECT_NAME}.desktop DESTINATION /usr/share/applications)
