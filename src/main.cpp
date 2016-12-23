@@ -38,6 +38,7 @@ class wxMyApp : public wxApp
 IMPLEMENT_APP(wxMyApp)
 bool wxMyApp::OnInit()
 {
+        wxMilliSleep(100);
         frmMain* frame=new frmMain((wxWindow*)NULL);
         frame->Show(true);
         return true;
