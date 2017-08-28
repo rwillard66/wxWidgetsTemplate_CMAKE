@@ -25,6 +25,8 @@ PROJECT (mywxproject)
 SET(TARGET_VERSION_MAJOR 0)
 SET(TARGET_VERSION_MINOR 1)
 SET(TARGET_VERSION_PATCH 0)
+#set target version
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DVERMAJ=${TARGET_VERSION_MAJOR} -DVERMIN=${TARGET_VERSION_MINOR} -DVERPAT=${TARGET_VERSION_PATCH}")
 SET(VERSION "${TARGET_VERSION_MAJOR}.${TARGET_VERSION_MINOR}.${TARGET_VERSION_PATCH}")
 SET(CPACK_PACKAGE_CONTACT "Rob Willard <rwillard66@gmail.com>")
 SET(TARGET_SHORT_DESCRIPTION "My application short description")
@@ -34,24 +36,113 @@ SET(TARGET_LONG_DESCTIPTION " This is a template to create new wxWidgets based\n
 SET(TARGET_LONG_DESCTIPTION "${TARGET_LONG_DESCTIPTION} applications. Please view the README.txt file included in the\n")
 SET(TARGET_LONG_DESCTIPTION "${TARGET_LONG_DESCTIPTION} root directory of this project.\n")
 
+OPTION(DOALL "DOALL" OFF)
+OPTION(USE_FB "USE_FB" OFF) # To use formbuilding, set to ONs
+
+#disable CMAKE developer warnings to supress warning under windows
+IF(NOT DEFINED CMAKE_SUPPRESS_DEVELOPER_WARNINGS)
+     SET(CMAKE_SUPPRESS_DEVELOPER_WARNINGS 1 CACHE INTERNAL "No dev warnings")
+ENDIF(NOT DEFINED CMAKE_SUPPRESS_DEVELOPER_WARNINGS)
+
 # Any additional source include directories
 SET(ADDSRCDIR "")
 
-# Add any Debian depends for packaging. This variable is comma separated
-SET(DEPENDS "libwxbase3.0-0, libwxgtk3.0-0")
+# autogenerate dependency information
+set (CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
+
 # Set Gnome icon location for .deb distribution
 SET(CPACK_DEBIAN_PACKAGE_SECTION "Office")
-
-####################################################
-# LIBRARY DISCOVERY
-####################################################
-MESSAGE("== Discovering Libraries ==")
 
 #specify location of custom cmake modules
 SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_LIST_DIR}/cmake_modules")
 
-# Image magick for graphics conversion
-FIND_PACKAGE(ImageMagick COMPONENTS convert REQUIRED)
+#set temp directory for auto generated files
+SET( TMP_DIR "${CMAKE_BINARY_DIR}/CMakeFiles/CMakeTmp" )
+
+####################################################
+# INCLUDE DIRECTORIES AND FILES
+####################################################
+
+INCLUDE_DIRECTORIES(src res "../common/")
+FILE(GLOB SOURCES "src/*.c*" "${TMP_DIR}/cpp/*.c*" "../common/*.c*")
+
+####################################################
+# IMAGE DEFINITION SECTION
+####################################################
+# Any images included in the application must be indicated here.
+# Place the image in the res directory, and then add it to the appropriate
+# size array below.
+#
+# 4 types of images:
+#   SML   - for menus - 16x16
+#   MED   - for toolbars and small buttons 24x24
+#   LRG   - for large buttons 48x48
+#   ICN   - for program icon
+
+SET( IMAGES_SML
+	)
+
+SET( IMAGES_MED
+	connect.svg
+	disconnect.svg
+	 )
+
+SET( IMAGES_LRG
+	${PROJECT_NAME}.svg
+	)
+
+SET( IMAGES_CUST
+	banner.svg
+	)
+
+# icon graphic must be saved as ${PROJECT_NAME}.svg
+SET( IMAGES_ICN ${PROJECT_NAME}.svg )
+
+####################################################
+# Platform specific settings
+####################################################
+SET(RES_LOC "${CMAKE_CURRENT_LIST_DIR}/res")
+
+ADD_DEFINITIONS(-DTIXML_USE_STL)
+
+SET(ICONTYPE ico)
+IF(WIN32)
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static-libgcc -static-libstdc++ -mwindows")
+ELSEIF(APPLE)
+	SET(ICONTYPE icns)
+	SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libstdc++")
+	INCLUDE_DIRECTORIES(/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.11.sdk/usr/include/c++/4.2.1)
+ELSE() #LINUX
+#	SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+ENDIF()
+
+####################################################
+# First run check
+####################################################
+
+IF(NOT EXISTS ${TMP_DIR}/${PROJECT_NAME}.${ICONTYPE})
+	# if the project icon does not exist, we assume this is a first run and
+	# override defaults and command line switches to generate everything
+	SET(DOALL ON)
+ENDIF(NOT EXISTS  ${TMP_DIR}/${PROJECT_NAME}.${ICONTYPE})
+
+IF(NOT DOALL)
+	MESSAGE("==================================================================")
+	MESSAGE("Quick Building ${PROJECT_NAME}\n")
+	MESSAGE("  To rebuild forms, help and images, run cmake")
+	MESSAGE("  again with the -DDOALL=ON option")
+	MESSAGE("==================================================================")
+ENDIF(NOT DOALL)
+
+####################################################
+# Library discovery.
+####################################################
+MESSAGE("== Discovering Libraries ==")
+
+IF(DOALL)
+	# Image magick for graphics conversion
+	FIND_PACKAGE(ImageMagick COMPONENTS convert REQUIRED)
+ENDIF(DOALL)
 
 #wxWidgets
 IF(WIN32)
@@ -60,12 +151,14 @@ IF(WIN32)
 ELSEIF(APPLE)
 	SET(wxWidgets_ROOT_DIR "/wxWidgets-3.0.2/build-release/")
 ENDIF(WIN32)
-FIND_PACKAGE(wxWidgets COMPONENTS adv gl core base html REQUIRED)
+FIND_PACKAGE(wxWidgets COMPONENTS adv xrc gl html core base REQUIRED)
 INCLUDE(${wxWidgets_USE_FILE})
 INCLUDE_DIRECTORIES(${wxWidgets_INCLUDE_DIRS})
 
 # Add any additional libraries to the following 
 SET(MYLIBS ${wxWidgets_LIBRARIES})
+
+MESSAGE("== Library discovery complete ==")
 
 ####################################################
 # Platform specific settings
@@ -83,76 +176,59 @@ ELSE() #LINUX
 ENDIF()
 
 ####################################################
-# IMAGE DEFINITION SECTION
-####################################################
-# Any images included in the application must be indicated here.
-# Place the .png image in the res directory, and then add it to the appropriate
-# size array below.
-#
-# 4 types of images:
-#   SML   - for menus - 16x16
-#   MED   - for toolbars and small buttons 24x24
-#   LRG   - for large buttons 48x48
-#   ICN   - for program icon
-
-SET( IMAGES_SML
-	)
-
-SET( IMAGES_MED
-	 )
-
-SET( IMAGES_LRG
-	)
-
-# icon graphic must be saved as ${PROJECT_NAME}.png
-SET( IMAGES_ICN ${PROJECT_NAME} )
-
-####################################################
 # Image creation
 ####################################################
-MESSAGE("== Creating Images ==")
-
-SET( TMP_DIR "${CMAKE_BINARY_DIR}/CMakeFiles/CMakeTmp" )
-
-FUNCTION (MAKE_XPM size imagelist)
+FUNCTION (MAKE_XPM sizex sizey imagelist)
 	FOREACH(image ${imagelist})
-		MESSAGE("  -- Converting ${image}.png to ${image}${size}.cpp")
-		SET( PNG_FILE ${RES_LOC}/${image}.png )
-		SET( XPM_FILE ${TMP_DIR}/${image}${size}.xpm )
-		SET( CPP_FILE ${RES_LOC}/cpp/${image}${size}.cpp )
-		EXECUTE_PROCESS( COMMAND ${ImageMagick_convert_EXECUTABLE} ${PNG_FILE} -resize ${size}x${size} ${XPM_FILE})
-		EXECUTE_PROCESS( COMMAND ${CMAKE_COMMAND} -E copy  ${XPM_FILE} ${CPP_FILE} )
-		FILE(READ ${CPP_FILE} STATCPP)
+		GET_FILENAME_COMPONENT(IMG_NAME ${image} NAME_WE)
+		MESSAGE("  -- Converting ${image} to ${IMG_NAME}${sizex}.cpp")
+		SET( IN_FILE ${RES_LOC}/${image} )
+		EXECUTE_PROCESS( COMMAND ${ImageMagick_convert_EXECUTABLE} -background none ${IN_FILE} -resize  ${sizex}x${sizey} ${TMP_DIR}/${IMG_NAME}${sizex}.xpm)
+		EXECUTE_PROCESS( COMMAND ${ImageMagick_convert_EXECUTABLE} -background none ${IN_FILE} -resize ${sizex}x${sizey} -type Grayscale ${TMP_DIR}/${IMG_NAME}_disabled${sizex}.xpm)
+		EXECUTE_PROCESS( COMMAND ${CMAKE_COMMAND} -E copy ${TMP_DIR}/${IMG_NAME}${sizex}.xpm  ${TMP_DIR}/cpp/${IMG_NAME}${sizex}.cpp )
+		EXECUTE_PROCESS( COMMAND ${CMAKE_COMMAND} -E copy ${TMP_DIR}/${IMG_NAME}_disabled${sizex}.xpm  ${TMP_DIR}/cpp/${IMG_NAME}_disabled${sizex}.cpp )
+		FILE(READ ${TMP_DIR}/cpp/${IMG_NAME}${sizex}.cpp STATCPP)
 		STRING(REPLACE "static" "const" CONSTCPP "${STATCPP}")
-		FILE(WRITE ${CPP_FILE} "${CONSTCPP};")
+		FILE(WRITE ${TMP_DIR}/cpp/${IMG_NAME}${sizex}.cpp "${CONSTCPP};")
+		FILE(READ ${TMP_DIR}/cpp/${IMG_NAME}_disabled${sizex}.cpp STATCPP)
+		STRING(REPLACE "static" "const" CONSTCPP "${STATCPP}")
+		FILE(WRITE ${TMP_DIR}/cpp/${IMG_NAME}_disabled${sizex}.cpp "${CONSTCPP};")
 	ENDFOREACH(image)
 ENDFUNCTION(MAKE_XPM)
 
 FUNCTION (MAKE_ICON image)
-	MESSAGE("  -- Building icon: ${image}.${ICONTYPE}")
-	EXECUTE_PROCESS(COMMAND ${ImageMagick_convert_EXECUTABLE} ${RES_LOC}/${image}.png ${RES_LOC}/${image}.${ICONTYPE})
+	MESSAGE("  -- Building icon: ${PROJECT_NAME}.${ICONTYPE}")
+	EXECUTE_PROCESS(COMMAND ${ImageMagick_convert_EXECUTABLE} ${RES_LOC}/${image} -resize 48x48 ${TMP_DIR}/${PROJECT_NAME}.${ICONTYPE})
 ENDFUNCTION(MAKE_ICON)
 
-MAKE_XPM(16 "${IMAGES_SML}")
-MAKE_XPM(24 "${IMAGES_MED}")
-MAKE_XPM(48 "${IMAGES_LRG}")
-MAKE_ICON("${IMAGES_ICN}")
+IF(DOALL)
+	MESSAGE("== Building Graphics ==")
+	MAKE_XPM(16 16 "${IMAGES_SML}")
+	MAKE_XPM(24 24 "${IMAGES_MED}")
+	MAKE_XPM(48 48 "${IMAGES_LRG}")
+	MAKE_XPM(100 350 "${IMAGES_CUST}")
+	MAKE_ICON("${IMAGES_ICN}")
+	MESSAGE("== Building Graphics Complete ==")
+	IF(USE_FB)
+		####################################################
+		# Build forms section
+		####################################################
+		MESSAGE("== Building Forms ==")
 
-####################################################
-# Build forms section
-####################################################
-MESSAGE("== Building Forms ==")
+		EXECUTE_PROCESS( COMMAND wxformbuilder --generate --language=XRC ${RES_LOC}/forms.fbp)
+	ENDIF(USE_FB)
+	####################################################
+	# Set default for future CMAkes to DOALL = OFF
+	####################################################
+	SET(DOALL OFF)
 
-EXECUTE_PROCESS( COMMAND wxformbuilder --generate --language=C++ ${RES_LOC}/forms.fbp)
+ENDIF(DOALL)
 
 ####################################################
 # Build Application section
 ####################################################
 
 MESSAGE("== Linking ==")
-
-INCLUDE_DIRECTORIES(src res)
-FILE(GLOB SOURCES "src/*.c*" "res/cpp/*.c*")
 
 ADD_EXECUTABLE(${PROJECT_NAME} ${SOURCES})
 
@@ -168,14 +244,14 @@ SET(CPACK_PACKAGE_VERSION_MAJOR "${TARGET_VERSION_MAJOR}")
 SET(CPACK_PACKAGE_VERSION_MINOR "${TARGET_VERSION_MINOR}")
 SET(CPACK_PACKAGE_VERSION_PATCH "${TARGET_VERSION_PATCH}")
 SET(CPACK_PACKAGE_VERSION "${VERSION}")
-SET(CPACK_PACKAGE_ICON "${RES_LOC}/${PROJECT_NAME}.${ICONTYPE}")
+SET(CPACK_PACKAGE_ICON "${TMP_DIR}/${PROJECT_NAME}.${ICONTYPE}")
 SET(CPACK_PACKAGE_VENDOR "Rob Willard")
 SET(CPACK_PACKAGE_HOMEPAGE "http://")
 SET(CPACK_PACKAGE_DESCRIPTION_SUMMARY "${TARGET_SHORT_DESCRIPTION}")
 
 IF(WIN32)
 	#Create and link resource file for icons.
-	SET(INFO_RC "id ICON \"${RES_LOC}/${PROJECT_NAME}.${ICONTYPE}\"\n")
+	SET(INFO_RC "id ICON \"${TMP_DIR}/${PROJECT_NAME}.${ICONTYPE}\"\n")
 	SET(INFO_RC "${INFO_RC}1 VERSIONINFO\n")
 	SET(INFO_RC "${INFO_RC}FILEVERSION\t${TARGET_VERSION_MAJOR},${TARGET_VERSION_MINOR},${TARGET_VERSION_PATCH}\n")
 	SET(INFO_RC "${INFO_RC}PRODUCTVERSION\t${TARGET_VERSION_MAJOR},${TARGET_VERSION_MINOR},${TARGET_VERSION_PATCH}\n")
@@ -188,7 +264,7 @@ IF(WIN32)
 	SET(INFO_RC "${INFO_RC}    VALUE \"FileDescription\", \"${TARGET_SHORT_DESCRIPTION}\"\n")
 	SET(INFO_RC "${INFO_RC}    VALUE \"FileVersion\", \"${VERSION}\"\n")
 	SET(INFO_RC "${INFO_RC}    VALUE \"InternalName\", \"${PROJECT_NAME}\"\n")
-	SET(INFO_RC "${INFO_RC}    VALUE \"LegalCopyright\", \"(c) 2016 Rob Willard\"\n")
+	SET(INFO_RC "${INFO_RC}    VALUE \"LegalCopyright\", \"(c) 2017 Rob Willard\"\n")
 	SET(INFO_RC "${INFO_RC}    VALUE \"OriginalFilename\", \"${PROJECT_NAME}\"\n")
 	SET(INFO_RC "${INFO_RC}    VALUE \"ProductName\", \"${PROJECT_NAME}\"\n")
 	SET(INFO_RC "${INFO_RC}    VALUE \"ProductVersion\", \"${VERSION}\"\n")
@@ -211,9 +287,9 @@ IF(WIN32)
         COMPONENT applications)
 	INSTALL(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION .)
 	SET(CPACK_PACKAGE_INSTALL_DIRECTORY "Sagatech\\\\${PROJECT_NAME}")
-	SET(CPACK_PACKAGE_ICON "${RES_LOC}\\\\${PROJECT_NAME}.png")
-	SET(CPACK_NSIS_MUI_ICON "${RES_LOC}\\\\${PROJECT_NAME}.${ICONTYPE}")
-	SET(CPACK_NSIS_MUI_UNIICON "${RES_LOC}\\\\${PROJECT_NAME}.${ICONTYPE}")
+	SET(CPACK_PACKAGE_ICON "${TMP_DIR}\\\\${PROJECT_NAME}.${ICONTYPE}")
+	SET(CPACK_NSIS_MUI_ICON "${TMP_DIR}\\\\${PROJECT_NAME}.${ICONTYPE}")
+	SET(CPACK_NSIS_MUI_UNIICON "${TMP_DIR}\\\\${PROJECT_NAME}.${ICONTYPE}")
 	SET(CPACK_NSIS_MENU_LINKS "${PROJECT_NAME}" "${PROJECT_NAME}")
 ELSEIF(APPLE)
 	# Create Info.plist file for bundle
@@ -248,7 +324,7 @@ ELSEIF(APPLE)
 	SET(CPACK_GENERATOR "Bundle")
 	SET(CPACK_BUNDLE_NAME "${PROJECT_NAME}")
 	SET(CPACK_BUNDLE_PLIST "${CMAKE_BINARY_DIR}/Info.plist")
-	SET(CPACK_BUNDLE_ICON "${RES_LOC}/${PROJECT_NAME}.${ICONTYPE}")
+	SET(CPACK_BUNDLE_ICON "${TMP_DIR}/${PROJECT_NAME}.${ICONTYPE}")
 	INSTALL(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION ../MacOS)
 ELSE() #LINUX
 	# Create .desktop file for application launcher
@@ -268,6 +344,6 @@ ELSE() #LINUX
 	SET(CPACK_DEBIAN_PACKAGE_DEPENDS "${DEPENDS}")
 	INSTALL(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION bin)
 	INSTALL(FILES ${CMAKE_BINARY_DIR}/${PROJECT_NAME}.desktop DESTINATION /usr/share/applications)
-	INSTALL(FILES ${RES_LOC}/${PROJECT_NAME}.${ICONTYPE} DESTINATION /usr/share/${PROJECT_NAME})
+	INSTALL(FILES ${TMP_DIR}/${PROJECT_NAME}.${ICONTYPE} DESTINATION /usr/share/${PROJECT_NAME})
 ENDIF()
 INCLUDE(CPack)
